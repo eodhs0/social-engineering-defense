@@ -27,7 +27,7 @@ import org.json.simple.parser.ParseException;
 
 
 
-public class DetectSpam{
+public class DetectPhishingMail{
 	public static void detectCommand(LexicalizedParser lp, String sentence) {		   
 		
 		//penn tree
@@ -145,5 +145,54 @@ public class DetectSpam{
 			}
 	    }
 	}
+	
+	public static void detectSuggestDesire(LexicalizedParser lp, String sentence) throws IOException {
+		
+		TreebankLanguagePack tlp = lp.treebankLanguagePack(); // a PennTreebankLanguagePack for English
+		GrammaticalStructureFactory gsf = tlp.grammaticalStructureFactory();
+		
+		Tree parse = lp.apply(sentence);
+		
+		GrammaticalStructure gs = gsf.newGrammaticalStructure(parse);
+		List<TypedDependency> tdl = gs.typedDependenciesCCprocessed();
+		
+		for (List<HasWord> sentence : new DocumentPreprocessor(
+				"c:/users/dyson/desktop/java_workspace/stanfordParser/out.txt")) {
+			Tree parse = lp.apply(sentence);
+		}
+		
+		ArrayList<TaggedWord> listedTaggedString = parse.taggedYield();
 
+		// Judge the suggestion sentence
+		for (int i = 0; i < listedTaggedString.size() - 1; i++) {
+			if (listedTaggedString.get(i).toString().toLowerCase().contentEquals("should/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("would/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("'d/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("could/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("might/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("may/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("must/md")
+					|| (listedTaggedString.get(i).toString().toLowerCase().contentEquals("have/vbp")
+							&& listedTaggedString.get(i + 1).toString().toLowerCase().contentEquals("to/to"))) {
+				if (i != 0 && listedTaggedString.get(i - 1).toString().toLowerCase().contentEquals("you/prp")) {
+					System.out.println("It's suggestion.");
+					break;
+				}
+			}
+		}
+		
+		// Judge the desire sentence
+		for (int i = 0; i < tdl.size(); i++) {
+			String extractElement = tdl.get(i).reln().toString();
+			if (extractElement.equals("nsubj")) {
+				if (tdl.get(i).gov().value().toString().toLowerCase().equals("want")
+						|| tdl.get(i).gov().value().toString().toLowerCase().equals("hope")
+						|| tdl.get(i).gov().value().toString().toLowerCase().equals("wish")
+						|| tdl.get(i).gov().value().toString().toLowerCase().equals("desire")) {
+					System.out.println("It is desire sentence.");
+					break;
+				}
+			}
+		}
+	}
 }
