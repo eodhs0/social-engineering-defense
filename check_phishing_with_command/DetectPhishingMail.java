@@ -68,6 +68,55 @@ public class DetectPhishingMail{
 	    System.out.println(">>>");	   
 	}
 	
+public static void detectSuggestDesire(LexicalizedParser lp, String sentence) throws IOException {
+		
+		TreebankLanguagePack tlp = lp.treebankLanguagePack(); // a PennTreebankLanguagePack for English
+		GrammaticalStructureFactory gsf = tlp.grammaticalStructureFactory();
+
+		TokenizerFactory<CoreLabel> tokenizerFactory = PTBTokenizer.factory(new CoreLabelTokenFactory(), "");
+		Tokenizer<CoreLabel> tok = tokenizerFactory.getTokenizer(new StringReader(sentence));
+		List<CoreLabel> rawWords = tok.tokenize();
+		Tree parse = lp.apply(rawWords);
+		
+		ArrayList<TaggedWord> listedTaggedString = parse.taggedYield();
+
+		// Judge the suggestion sentence
+		for (int i = 0; i < listedTaggedString.size() - 1; i++) {
+			if (listedTaggedString.get(i).toString().toLowerCase().contentEquals("should/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("would/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("'d/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("could/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("might/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("may/md")
+					|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("must/md")
+					|| (listedTaggedString.get(i).toString().toLowerCase().contentEquals("have/vbp")
+							&& listedTaggedString.get(i + 1).toString().toLowerCase().contentEquals("to/to"))) {
+				if (i != 0 && listedTaggedString.get(i - 1).toString().toLowerCase().contentEquals("you/prp")) {
+					System.out.println(sentence + ">>> It is suggestion." );
+					break;
+				}
+			}
+		}
+
+		GrammaticalStructure gs = gsf.newGrammaticalStructure(parse);
+		List<TypedDependency> tdl = gs.typedDependenciesCCprocessed();
+
+		// Judge the desire sentence
+		for (int i = 0; i < tdl.size(); i++) {
+			String extractElement = tdl.get(i).reln().toString();
+			if (extractElement.equals("nsubj")) {
+				if (tdl.get(i).gov().value().toString().toLowerCase().equals("want")
+						|| tdl.get(i).gov().value().toString().toLowerCase().equals("hope")
+						|| tdl.get(i).gov().value().toString().toLowerCase().equals("wish")
+						|| tdl.get(i).gov().value().toString().toLowerCase().equals("desire")) {
+					System.out.println(sentence + ">>> It is desire sentence.");
+					break;
+				}
+			}
+		}
+
+	}
+	
 	public static void main(String[] args) {
 		String parserModel = "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz";
 	    String fileName = System.getProperty("user.dir")+"\\src\\data";
@@ -96,12 +145,12 @@ public class DetectPhishingMail{
 			    	FileReader fr = null;
 			    	BufferedReader br = null;
 			    	try {
-				    	fr = new FileReader(fileName + ".txt"); 
+				    	fr = new FileReader("c:/users/dyson/desktop/java_workspace/stanfordParser/parseTest.txt"); 
 				    	br = new BufferedReader(fr);
 				    	
 				    	String value;
 				    	while((value = br.readLine()) != null) {
-				    		detectCommand(lp, value);
+				    		detectSuggestDesire(lp, value);
 				    	}
 			    	} catch(IOException e) {
 			    		e.printStackTrace();
@@ -146,53 +195,5 @@ public class DetectPhishingMail{
 			    if(scanner != null) scanner.close();
 			}
 	    }
-	}
-	
-	public static void detectSuggestDesire(LexicalizedParser lp, String sentence) throws IOException {
-		
-		TreebankLanguagePack tlp = lp.treebankLanguagePack(); // a PennTreebankLanguagePack for English
-		GrammaticalStructureFactory gsf = tlp.grammaticalStructureFactory();
-		
-		for (List<HasWord> tokenizedSentence : new DocumentPreprocessor(
-				sentence)) {
-			Tree parse = lp.apply(tokenizedSentence);
-			ArrayList<TaggedWord> listedTaggedString = parse.taggedYield();
-
-			// Judge the suggestion sentence
-			for (int i = 0; i < listedTaggedString.size() - 1; i++) {
-				if (listedTaggedString.get(i).toString().toLowerCase().contentEquals("should/md")
-						|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("would/md")
-						|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("'d/md")
-						|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("could/md")
-						|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("might/md")
-						|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("may/md")
-						|| listedTaggedString.get(i).toString().toLowerCase().contentEquals("must/md")
-						|| (listedTaggedString.get(i).toString().toLowerCase().contentEquals("have/vbp")
-								&& listedTaggedString.get(i + 1).toString().toLowerCase().contentEquals("to/to"))) {
-					if (i != 0 && listedTaggedString.get(i - 1).toString().toLowerCase().contentEquals("you/prp")) {
-						System.out.println("It's suggestion.");
-						break;
-					}
-				}
-			}
-			
-			
-			GrammaticalStructure gs = gsf.newGrammaticalStructure(parse);
-			List<TypedDependency> tdl = gs.typedDependenciesCCprocessed();
-			
-			// Judge the desire sentence
-			for (int i = 0; i < tdl.size(); i++) {
-				String extractElement = tdl.get(i).reln().toString();
-				if (extractElement.equals("nsubj")) {
-					if (tdl.get(i).gov().value().toString().toLowerCase().equals("want")
-							|| tdl.get(i).gov().value().toString().toLowerCase().equals("hope")
-							|| tdl.get(i).gov().value().toString().toLowerCase().equals("wish")
-							|| tdl.get(i).gov().value().toString().toLowerCase().equals("desire")) {
-						System.out.println("It is desire sentence.");
-						break;
-					}
-				}
-			}
-		}
 	}
 }
