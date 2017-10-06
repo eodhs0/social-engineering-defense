@@ -35,6 +35,7 @@ import com.google.gson.stream.JsonReader;
 
 public class DetectPhishingMail{
 	
+	private static String[] specialWord;
 	/*
 	 * Extracting phishing keywords
 	 * */
@@ -58,12 +59,14 @@ public class DetectPhishingMail{
 	/*
 	 * Extracting command sentence
 	 * */
+	//"(@VP=verb (< S !> SBAR) !$,,@NP)"
+	//(@VP=verb (< S !> SBAR) | (< S & > S & < NN) !$,,@NP)
 	private static boolean isImperative(Tree parse) {
 		TregexPattern noNP = TregexPattern.compile("((@VP=verb > (S !> SBAR)) !$,,@NP)");
 	    TregexMatcher n = noNP.matcher(parse);
 	    while(n.find()) {
 	    	String match = n.getMatch().firstChild().label().toString();
-	    	
+
 	    	//remove gerund, to + infinitiv
 	    	if(match.equals("VP")) {
 	    		match = n.getMatch().firstChild().firstChild().label().toString();
@@ -74,6 +77,7 @@ public class DetectPhishingMail{
 	    	
 	    	//imperative sentence
 	    	System.out.println("It is imperative sentence.");
+	    	n.getMatch().pennPrint();
 	    	return true;
 	    }
 	    return false;
@@ -176,8 +180,20 @@ public class DetectPhishingMail{
 	    GrammaticalStructureFactory gsf = tlp.grammaticalStructureFactory();
 	    GrammaticalStructure gs = gsf.newGrammaticalStructure(parse);
 	    List<TypedDependency> tdl = gs.typedDependenciesCCprocessed();
+	   
 	    
 	    System.out.println("<<< " + sentence +" >>>");
+	    
+	    //0. Hope, Kindly, Apply, Reply exception process
+	    
+		for(int i = 0; i < 4; i++) {
+			if(sentence.toLowerCase().startsWith(specialWord[i])) {
+				System.out.println("It is imperative sentence.");
+				searchKeyword(tdl,Arrays.asList("nmod","nsubj","subjpass"), Arrays.asList("dobj"));
+				System.out.println();
+				return;
+			}
+		}
 	    
 	    //1. extracting imperative sentence    	
 	    if(isImperative(parse)) {
@@ -220,6 +236,11 @@ public class DetectPhishingMail{
 				new FileWriter("c:/users/dyson/desktop/java_workspace/stanfordParser/extract_imperative_command.txt", true));
 	    
 	    int count = 0;
+	    specialWord = new String[4];
+		specialWord[0] = "hope";
+		specialWord[1] = "reply";
+		specialWord[2] = "apply";
+		specialWord[3] = "kindly";
 	    
 		if(args.length == 0){
 			Scanner scanner = null;
@@ -236,7 +257,7 @@ public class DetectPhishingMail{
 				    	String value = scanner.nextLine();
 				    	detectCommand(lp, value, pw2);
 			    	}
-			    break;
+			    	break;
 			    
 			    //text input file
 			    case 2:
@@ -248,6 +269,8 @@ public class DetectPhishingMail{
 				    	
 				    	String value;
 				    	while((value = br.readLine()) != null) {
+				    		
+				    		// reply, hope, 
 				    		System.out.println(++count);
 				    		detectCommand(lp, value, pw2);
 				    	}
@@ -269,7 +292,6 @@ public class DetectPhishingMail{
 			    	try {
 			    		JsonReader reader = new JsonReader(new FileReader("c:/Users/dyson/Desktop/java_workspace/stanfordParser/sentence_tokenized_scam2.json"));
 			    		Gson gson = new GsonBuilder().create();
-				    		
 			    		reader.beginObject();
 				    	while(reader.hasNext()) {
 				    		String name = reader.nextName();
